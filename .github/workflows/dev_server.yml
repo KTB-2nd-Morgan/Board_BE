@@ -68,19 +68,20 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Trigger CodeDeploy Deployment
-        uses: aws-actions/aws-codedeploy-deploy@v2
-        with:
-          application-name: spring-app-codedeploy
-          deployment-group: spring-app-deployment-group
-          revision-location: |
-            {
-              "revisionType": "GitHub",
-              "gitHubLocation": {
-                "repository": "KTB-2nd-Morgan/Board_BE",
-                "commitId": "${{ github.sha }}"
-              }
-            }
+        run: |
+          aws deploy create-deployment \
+            --application-name spring-app-codedeploy \
+            --deployment-group-name spring-app-deployment-group \
+            --deployment-config-name CodeDeployDefault.AllAtOnce \
+            --revision-location '{
+                "revisionType": "GitHub",
+                "gitHubLocation": {
+                  "repository": "KTB-2nd-Morgan/Board_BE",
+                  "commitId": "'"${{github.sha}}"'"
+                }
+              }'
         env:
           AWS_REGION: ${{ env.AWS_REGION }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          IMAGE_TAG: ${{ env.IMAGE_TAG }}
