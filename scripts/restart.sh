@@ -7,6 +7,9 @@ echo "Stopping any existing container named spring-app..."
 docker stop spring-app || true
 docker rm spring-app || true
 
+echo "Logging in to Amazon ECR..."
+$(aws ecr get-login --no-include-email --region ${AWS_REGION})
+
 echo "Pulling latest image from ECR..."
 docker pull ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/spring-app:${IMAGE_TAG}
 
