@@ -67,6 +67,9 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Create version file
+        run: echo "${{ env.IMAGE_TAG }}" > version.txt
+
       - name: Trigger CodeDeploy Deployment
         run: |
           aws deploy create-deployment \
