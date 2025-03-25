@@ -68,7 +68,7 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Trigger CodeDeploy Deployment
-        uses: aws-actions/aws-codedeploy-deploy@v1
+        uses: aws-actions/aws-codedeploy-deploy@v2
         with:
           application-name: spring-app-codedeploy
           deployment-group: spring-app-deployment-group
