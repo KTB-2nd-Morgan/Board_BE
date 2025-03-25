@@ -70,8 +70,8 @@ jobs:
       - name: Trigger CodeDeploy Deployment
         run: |
           aws deploy create-deployment \
-            --application-name spring-app-codedeploy \
-            --deployment-group-name spring-app-deployment-group \
+            --application-name morgan-dev \
+            --deployment-group-name morgan-dev-deployment-group-backend \
             --deployment-config-name CodeDeployDefault.AllAtOnce \
             --github-location "repository=KTB-2nd-Morgan/Board_BE,commitId=${GITHUB_SHA}"
         env:
