@@ -22,7 +22,9 @@ echo "Pulling latest image from ECR..."
 docker pull "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/spring-app:${IMAGE_TAG}"
 
 echo "Starting new container from image..."
-docker run -d --restart unless-stopped --name spring-app -p 8080:8080 \
+docker run -d --restart unless-stopped --name spring-app \
+ --env-file .env \
+ -p 8080:8080 \
   "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/spring-app:${IMAGE_TAG}"
 
 echo "✅ Deployment complete."
