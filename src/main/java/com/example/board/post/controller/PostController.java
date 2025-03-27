@@ -22,11 +22,10 @@ public class PostController {
     private final PostService postService;
 
     @PostMapping
-    public CommonResponse<?> createPost(
+    public CommonResponse<PostResponseDTO.getPost> createPost(
             @RequestBody PostRequestDTO.createPost postRequest
     ) {
-        postService.createPost(postRequest);
-        return CommonResponse.onNoContent();
+        return CommonResponse.onSuccess(postService.createPost(postRequest));
     }
 
     @GetMapping
@@ -35,12 +34,11 @@ public class PostController {
     }
 
     @PutMapping("/{postId}")
-    public CommonResponse<?> updatePost(
+    public CommonResponse<PostResponseDTO.getPost> updatePost(
             @PathVariable Long postId,
             @RequestBody PostRequestDTO.updatePost postRequest
     ) {
-        postService.updatePost(postId, postRequest);
-        return CommonResponse.onNoContent();
+        return CommonResponse.onSuccess(postService.updatePost(postId, postRequest));
     }
 
     @DeleteMapping("/{postId}")
