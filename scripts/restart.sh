@@ -11,6 +11,9 @@ sudo yum install -y awscli
 echo "Loading environment variables..."
 source /home/ec2-user/app/scripts/set_env.sh
 
+echo "Navigating to app directory"
+cd /home/ec2-user/app
+
 echo "Stopping any existing container named spring-app..."
 docker stop spring-app || true
 docker rm spring-app || true
