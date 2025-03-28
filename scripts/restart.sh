@@ -28,6 +28,10 @@ echo "Starting new container from image..."
 docker run -d --restart unless-stopped --name spring-app \
  --env-file .env \
  -p 8080:8080 \
-  "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/spring-app:${IMAGE_TAG}"
+ --log-driver=awslogs \
+ --log-opt awslogs-group=/morgan/backend/spring-app \
+ --log-opt awslogs-region=ap-northeast-2 \
+ --log-opt awslogs-stream=spring-container-01 \
+ "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/spring-app:${IMAGE_TAG}"
 
 echo "✅ Deployment complete."
