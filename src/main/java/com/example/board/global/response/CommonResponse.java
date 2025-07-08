@@ -14,7 +14,7 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 @JsonPropertyOrder({"isSuccess", "code", "message", "data"})
-public class CommonResponse<T> {
+public record CommonResponse<T> {
 
 
 
