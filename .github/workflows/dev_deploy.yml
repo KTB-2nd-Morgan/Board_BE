@@ -18,7 +18,7 @@ concurrency:
 env:
   AWS_REGION:        ${{ secrets.AWS_REGION }}
   AWS_ACCOUNT_ID:    ${{ secrets.AWS_ACCOUNT_ID }}
-  ECR_REPO:          backend
+  ECR_REPO:          board/backend
   EC2_INSTANCE_ID:   ${{ secrets.EC2_INSTANCE_ID }}
   N8N_WEBHOOK_URL:   ${{ secrets.N8N_DEPLOY_WEBHOOK }}
   SERVICE:           ${{ inputs.service }}
