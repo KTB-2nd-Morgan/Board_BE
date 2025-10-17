@@ -28,8 +28,6 @@ env:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    env:
-      ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME }}   # ← 조건식에서 사용할 값
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -64,7 +62,6 @@ jobs:
       # === AWS 자격 설정 ===
       # A) 액세스키 방식
       - name: Configure AWS (keys)
-        if: ${{ env.ROLE_TO_ASSUME == '' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
