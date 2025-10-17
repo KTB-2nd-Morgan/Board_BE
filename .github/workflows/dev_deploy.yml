@@ -31,6 +31,13 @@ jobs:
     env:
       ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME }}   # ← 조건식에서 사용할 값
     steps:
+      - name: Show inputs exist (length only)
+        shell: bash
+        run: |
+          test -n "${{ secrets.AWS_ACCESS_KEY_ID }}" || (echo "AWS_ACCESS_KEY_ID EMPTY" && exit 1)
+          test -n "${{ secrets.AWS_SECRET_ACCESS_KEY }}" || (echo "AWS_SECRET_ACCESS_KEY EMPTY" && exit 1)
+          echo "Secrets seem present (non-empty)."
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -70,12 +77,10 @@ jobs:
           aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region:            ${{ env.AWS_REGION }}
-      - name: Debug AWS creds
         run: |
           aws --version
           echo "ROLE_TO_ASSUME=${ROLE_TO_ASSUME}"
           echo "AWS_REGION=${AWS_REGION}"
-          # 현재 자격증명으로 STS 호출 (여기서 실패하면 키 문제)
           aws sts get-caller-identity
 
       # B) OIDC 역할 가정(권장)
