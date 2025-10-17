@@ -1,0 +1,162 @@
+name: Deploy Spring Board
+
+on:
+  workflow_dispatch:
+    inputs:
+      service:  { description: '서비스명', required: true, type: string, default: 'board-backend' }
+      env:      { description: '환경(dev|prod)', required: true, type: string, default: 'dev' }
+      version:  { description: '버전태그(옵션)', required: false, type: string }
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: deploy-${{ inputs.env }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION:           ${{ secrets.AWS_REGION }}
+  AWS_ACCOUNT_ID:       ${{ secrets.AWS_ACCOUNT_ID }}
+  ECR_REPO:             backend
+  IMAGE:                ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}
+  EC2_INSTANCE_ID:      ${{ secrets.EC2_INSTANCE_ID }}
+  N8N_WEBHOOK_URL:      ${{ secrets.N8N_DEPLOY_WEBHOOK }}
+  SERVICE:              ${{ inputs.service }}
+  ENVIRONMENT:          ${{ inputs.env }}
+  VERSION_INPUT:        ${{ inputs.version }}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # === Java & Gradle ===
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      - name: Build with Gradle (skip tests)
+        run: |
+          ./gradlew clean build -x test
+          JAR=$(ls -1 build/libs/*.jar | head -n1)
+          echo "Built JAR: $JAR"
+          cp "$JAR" board.jar
+
+      # === AWS 자격 설정 ===
+      # A) 액세스키 방식 (간단)
+      - name: Configure AWS (keys)
+        if: ${{ !secrets.AWS_ROLE_TO_ASSUME }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ env.AWS_REGION }}
+
+      # B) OIDC 역할 가정(권장)
+      # - 위의 키 방식 대신 아래 블록을 쓰려면 secrets.AWS_ROLE_TO_ASSUME를 설정하고, 위 블록을 주석 처리하세요.
+      # - ECR 권한, SSM:SendCommand 권한이 있는 역할이어야 합니다.
+      # - OIDC 사용 시 GitHub OIDC provider와 trust policy 설정 필수.
+      # - name: Configure AWS (OIDC)
+      #   if: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+      #   uses: aws-actions/configure-aws-credentials@v4
+      #   with:
+      #     role-to-assume:  ${{ secrets.AWS_ROLE_TO_ASSUME }}
+      #     aws-region:      ${{ env.AWS_REGION }}
+
+      # - name: Login to ECR
+      #   uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build & Push image
+        id: build
+        run: |
+          TAG=${{ github.sha }}
+          [ -n "${VERSION_INPUT}" ] && TAG="${VERSION_INPUT}"
+          docker build -t $IMAGE:$TAG -t $IMAGE:latest .
+          docker push $IMAGE:$TAG
+          docker push $IMAGE:latest
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Rollout on EC2 via SSM
+        id: rollout
+        run: |
+          aws ssm send-command \
+            --instance-ids "$EC2_INSTANCE_ID" \
+            --document-name "AWS-RunShellScript" \
+            --comment "Deploy ${{ env.SERVICE }} to ${{ env.ENVIRONMENT }}" \
+            --parameters commands='
+              set -e
+
+              # 1) ECR 로그인
+              aws ecr get-login-password --region ${AWS_REGION} \
+                | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+
+              # 2) 배포 이미지(태그) 지정
+              if [ -n "${{ steps.build.outputs.tag }}" ]; then
+                export ECR_IMAGE="${{ env.IMAGE }}:${{ steps.build.outputs.tag }}"
+              else
+                export ECR_IMAGE="${{ env.IMAGE }}:latest"
+              fi
+
+              # 3) compose 배포 (compose 파일은 /home/ubuntu/board에 있다고 가정)
+              cd /home/ubuntu/board
+              docker compose pull
+              docker compose up -d
+
+              # 4) 헬스체크(선택)
+              for i in 1 2 3 4 5; do
+                sleep 3
+                if curl -fsS http://localhost/health >/dev/null 2>&1; then
+                  echo "Health OK"
+                  exit 0
+                fi
+                echo "Waiting for app..."
+              done
+              echo "Health check failed"
+              exit 1
+            ' >/dev/null
+
+      - name: Notify n8n (success)
+        if: success()
+        run: |
+          curl -s -X POST "$N8N_WEBHOOK_URL" \
+           -H "Content-Type: application/json" \
+           -d @- <<JSON
+          {
+            "status": "success",
+            "service": "${SERVICE}",
+            "env":     "${ENVIRONMENT}",
+            "image":   "${IMAGE}:${{ steps.build.outputs.tag }}",
+            "run_id":  "${{ github.run_id }}",
+            "repo":    "${{ github.repository }}",
+            "actor":   "${{ github.actor }}"
+          }
+          JSON
+
+      - name: Notify n8n (failure)
+        if: failure()
+        run: |
+          curl -s -X POST "$N8N_WEBHOOK_URL" \
+           -H "Content-Type: application/json" \
+           -d @- <<JSON
+          {
+            "status": "failure",
+            "service": "${SERVICE}",
+            "env":     "${ENVIRONMENT}",
+            "image":   "${IMAGE}:${{ steps.build.outputs.tag }}",
+            "run_id":  "${{ github.run_id }}",
+            "repo":    "${{ github.repository }}",
+            "actor":   "${{ github.actor }}"
+          }
+          JSON
