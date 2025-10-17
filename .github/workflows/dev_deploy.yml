@@ -92,36 +92,31 @@ jobs:
       - name: Rollout on EC2 via SSM
         id: rollout
         run: |
+          # 태그 결정 (빈 값이면 latest)
+          TAG="${{ steps.build.outputs.tag }}"
+          if [ -z "$TAG" ]; then TAG="latest"; fi
+
+          cat > /tmp/ssm_cmds.json <<EOF
+          {
+          "commands": [
+            "set -e",
+            "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com",
+            "export ECR_IMAGE=${IMAGE}:${TAG}",
+            "cd /home/ubuntu/board",
+            "docker compose pull",
+            "docker compose up -d",
+            "for i in 1 2 3 4 5; do sleep 3; if curl -fsS http://localhost/health >/dev/null 2>&1; then echo Health OK; exit 0; fi; echo Waiting for app...; done",
+            "echo Health check failed; exit 1"
+            ]
+          }
+          EOF
+      
           aws ssm send-command \
-            --instance-ids "$EC2_INSTANCE_ID" \
-            --document-name "AWS-RunShellScript" \
-            --comment "Deploy ${{ env.SERVICE }} to ${{ env.ENVIRONMENT }}" \
-            --parameters commands='
-              set -e
-              aws ecr get-login-password --region ${AWS_REGION} \
-                | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
-
-              if [ -n "${{ steps.build.outputs.tag }}" ]; then
-                export ECR_IMAGE="${IMAGE}:${{ steps.build.outputs.tag }}"
-              else
-                export ECR_IMAGE="${IMAGE}:latest"
-              fi
-
-              cd /home/ubuntu/board
-              docker compose pull
-              docker compose up -d
-
-              for i in 1 2 3 4 5; do
-                sleep 3
-                if curl -fsS http://localhost/health >/dev/null 2>&1; then
-                  echo "Health OK"
-                  exit 0
-                fi
-                echo "Waiting for app..."
-              done
-              echo "Health check failed"
-              exit 1
-            ' >/dev/null
+          --instance-ids "${EC2_INSTANCE_ID}" \
+          --document-name "AWS-RunShellScript" \
+          --comment "Deploy ${SERVICE} to ${ENVIRONMENT}" \
+          --parameters file:///tmp/ssm_cmds.json \
+          --output text
 
 #      - name: Notify n8n (success)
 #        if: success()
