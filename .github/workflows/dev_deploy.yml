@@ -126,20 +126,20 @@ jobs:
               exit 1
             ' >/dev/null
 
-      - name: Notify n8n (success)
-        if: success()
-        run: |
-          curl -s -X POST "$N8N_WEBHOOK_URL" -H "Content-Type: application/json" -d @- <<JSON
-          {
-            "status": "success",
-            "service": "${SERVICE}",
-            "env":     "${ENVIRONMENT}",
-            "image":   "${IMAGE}:${{ steps.build.outputs.tag }}",
-            "run_id":  "${{ github.run_id }}",
-            "repo":    "${{ github.repository }}",
-            "actor":   "${{ github.actor }}"
-          }
-          JSON
+#      - name: Notify n8n (success)
+#        if: success()
+#        run: |
+#          curl -s -X POST "$N8N_WEBHOOK_URL" -H "Content-Type: application/json" -d @- <<JSON
+#          {
+#            "status": "success",
+#            "service": "${SERVICE}",
+#            "env":     "${ENVIRONMENT}",
+#            "image":   "${IMAGE}:${{ steps.build.outputs.tag }}",
+#            "run_id":  "${{ github.run_id }}",
+#            "repo":    "${{ github.repository }}",
+#            "actor":   "${{ github.actor }}"
+#          }
+#          JSON
 
 #      - name: Notify n8n (failure)
 #        if: failure()
