@@ -72,12 +72,12 @@ jobs:
           aws-region:            ${{ env.AWS_REGION }}
 
       # B) OIDC 역할 가정(권장)
-      - name: Configure AWS (OIDC)
-        if: ${{ env.ROLE_TO_ASSUME != '' }}
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume:  ${{ env.ROLE_TO_ASSUME }}
-          aws-region:      ${{ env.AWS_REGION }}
+#      - name: Configure AWS (OIDC)
+#        if: ${{ env.ROLE_TO_ASSUME != '' }}
+#        uses: aws-actions/configure-aws-credentials@v4
+#        with:
+#          role-to-assume:  ${{ env.ROLE_TO_ASSUME }}
+#          aws-region:      ${{ env.AWS_REGION }}
 
       - name: Login to ECR
         uses: aws-actions/amazon-ecr-login@v2
