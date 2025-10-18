@@ -118,6 +118,36 @@ jobs:
           --parameters file:///tmp/ssm_cmds.json \
           --output text
 
+      - name: Notify Discord (success)
+        if: success()
+        run: |
+          curl -s -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d @- <<'JSON'
+          {
+            "embeds": [{
+              "title": "✅ Deploy Succeeded",
+              "description": "service=${{ env.SERVICE }}, env=${{ env.ENVIRONMENT }}, image=${{ env.IMAGE }}:${{ steps.build.outputs.tag }}",
+              "timestamp": "${{ github.event.repository.updated_at }}"
+            }]
+          }
+          JSON
+
+      - name: Notify Discord (failure)
+        if: failure()
+        run: |
+          curl -s -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d @- <<'JSON'
+          {
+            "embeds": [{
+              "title": "❌ Deploy Failed",
+              "description": "service=${{ env.SERVICE }}, env=${{ env.ENVIRONMENT }}\nRun: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+              "timestamp": "${{ github.event.repository.updated_at }}"
+            }]
+          }
+          JSON
+
 #      - name: Notify n8n (success)
 #        if: success()
 #        run: |
