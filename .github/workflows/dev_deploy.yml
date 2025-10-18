@@ -127,7 +127,7 @@ jobs:
           {
             "embeds": [{
               "title": "✅ Deploy Succeeded",
-              "description": "service=${{ env.SERVICE }}, env=${{ env.ENVIRONMENT }}, image=${{ env.IMAGE }}:${{ steps.build.outputs.tag }}",
+              "description": "service=${{ env.SERVICE }}\nenv=${{ env.ENVIRONMENT }}\nimage=${{ env.IMAGE }}:${{ steps.build.outputs.tag }}",
               "timestamp": "${{ github.event.repository.updated_at }}"
             }]
           }
